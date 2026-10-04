@@ -18,7 +18,10 @@ services:
   api:
     build: ./apps/api
     env_file: .env
-    command: sh -c "python manage.py migrate --run-syncdb && gunicorn config.wsgi:application --bind 0.0.0.0:8000"
+    command: sh -c "python manage.py migrate && gunicorn config.wsgi:application --bind 0.0.0.0:8000"
+    environment:
+      DATABASE_URL: postgres://proofgraph:proofgraph@db:5432/proofgraph
+      REDIS_URL: redis://redis:6379/0
     ports: ["8000:8000"]
     depends_on:
       db: {condition: service_healthy}
@@ -28,6 +31,9 @@ services:
     build: ./apps/api
     env_file: .env
     command: celery -A config worker --loglevel=INFO
+    environment:
+      DATABASE_URL: postgres://proofgraph:proofgraph@db:5432/proofgraph
+      REDIS_URL: redis://redis:6379/0
     depends_on: [api, redis]
     volumes: ["uploads:/app/media"]
   web:

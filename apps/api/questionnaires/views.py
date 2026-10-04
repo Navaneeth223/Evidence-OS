@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.exceptions import ValidationError
 from core.models import AuditLog
-from core.tenant import active_organization
+from core.tenant import active_organization, require_role
 from .models import Questionnaire, Question, AnswerDraft
 from .serializers import QuestionnaireSerializer, QuestionSerializer, AnswerSerializer
 from .services import draft_answer, approve_answer
@@ -35,7 +35,7 @@ class DraftAnswer(APIView):
 class ApproveAnswer(APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request, answer_id):
-        org = active_organization(request)
+        org = require_role(request, {"OWNER", "ADMIN", "REVIEWER"})
         answer = AnswerDraft.objects.filter(id=answer_id, question__questionnaire__organization=org).first()
         if answer is None: return Response(status=404)
         try: answer = approve_answer(answer, request.user, request.data.get("comment", ""))

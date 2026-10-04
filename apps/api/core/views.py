@@ -1,5 +1,8 @@
 import re
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.validators import validate_email
 from django.db import transaction
 from django.db.utils import OperationalError
 from django.http import JsonResponse
@@ -28,6 +31,11 @@ def register(request):
     org_name = request.data.get("organization_name", "").strip()
     if not email or not org_name or len(password) < 12:
         return Response({"detail": "Email, organization name, and a password of at least 12 characters are required."}, status=400)
+    try:
+        validate_email(email)
+        validate_password(password)
+    except DjangoValidationError as exc:
+        return Response({"detail": list(exc.messages)}, status=400)
     User = get_user_model()
     if User.objects.filter(username=email).exists():
         return Response({"email": ["An account with this email already exists."]}, status=400)

@@ -4,6 +4,7 @@ import io
 import logging
 from celery import shared_task
 from django.db import transaction
+from django.db.utils import OperationalError
 from .models import DocumentVersion, DocumentSection, EvidenceAtom
 
 logger = logging.getLogger(__name__)
@@ -50,7 +51,7 @@ def parse_version(version):
             if paragraph: sections.append(("PARAGRAPH", None, "", paragraph))
     return sections
 
-@shared_task(bind=True, autoretry_for=(OSError,), retry_backoff=True, max_retries=3)
+@shared_task(bind=True, autoretry_for=(OSError, OperationalError), retry_backoff=True, max_retries=3)
 def process_document(self, version_id):
     version = DocumentVersion.objects.select_related("document", "document__organization").get(id=version_id)
     doc = version.document

@@ -47,3 +47,11 @@ class ApprovalEvent(models.Model):
     new_status = models.CharField(max_length=20)
     comment = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+class ExportJob(Timestamped):
+    organization = models.ForeignKey("core.Organization", on_delete=models.CASCADE)
+    questionnaire = models.ForeignKey(Questionnaire, on_delete=models.PROTECT)
+    format = models.CharField(max_length=8, default="XLSX")
+    status = models.CharField(max_length=16, default="QUEUED")
+    file = models.FileField(upload_to="exports/%Y/%m/", blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)

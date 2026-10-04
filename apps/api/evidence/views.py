@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from core.models import AuditLog
-from core.tenant import active_organization
+from core.tenant import active_organization, require_role
 from .models import EvidenceAtom, SourceDocument, DocumentVersion
 from .serializers import EvidenceSerializer, DocumentSerializer
 
@@ -22,7 +22,7 @@ class EvidenceList(generics.ListAPIView):
 class EvidenceVerify(APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request, pk):
-        org = active_organization(request)
+        org = require_role(request, {"OWNER", "ADMIN", "EDITOR", "REVIEWER"})
         atom = EvidenceAtom.objects.filter(organization=org, id=pk).first()
         if atom is None: return Response(status=404)
         atom.verification_status = EvidenceAtom.Verification.VERIFIED
@@ -37,7 +37,7 @@ class DocumentListCreate(APIView):
         org = active_organization(request)
         return Response(DocumentSerializer(SourceDocument.objects.filter(organization=org), many=True).data)
     def post(self, request):
-        org = active_organization(request)
+        org = require_role(request, {"OWNER", "ADMIN", "EDITOR"})
         uploaded = request.FILES.get("file")
         title = request.data.get("title") or (uploaded.name if uploaded else "")
         if not uploaded: raise ValidationError({"file": "A file is required."})
@@ -51,6 +51,12 @@ class DocumentListCreate(APIView):
         doc = SourceDocument.objects.create(organization=org, title=title, owner=request.user)
         version = DocumentVersion.objects.create(document=doc, version_number=1, file=uploaded, original_filename=uploaded.name, mime_type=uploaded.content_type, file_size=uploaded.size, sha256_hash=sha)
         from .tasks import process_document
-        process_document.delay(str(version.id))
+        try:
+            process_document.delay(str(version.id))
+        except Exception as exc:
+            version.processing_status = "FAILED"; version.save(update_fields=["processing_status"])
+            doc.status = "FAILED"; doc.save(update_fields=["status", "updated_at"])
+            import logging
+            logging.getLogger(__name__).warning("Document task enqueue failed: version_id=%s error_type=%s", version.id, type(exc).__name__)
         AuditLog.objects.create(organization=org, actor=request.user, action="DOCUMENT_UPLOADED", resource_type="SourceDocument", resource_id=doc.id, metadata={"version_id": str(version.id), "filename": uploaded.name})
         return Response(DocumentSerializer(doc).data, status=status.HTTP_201_CREATED)
