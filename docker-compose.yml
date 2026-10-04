@@ -15,5 +15,25 @@ services:
   redis:
     image: redis:7-alpine
     ports: ["6379:6379"]
+  api:
+    build: ./apps/api
+    env_file: .env
+    command: sh -c "python manage.py migrate --run-syncdb && gunicorn config.wsgi:application --bind 0.0.0.0:8000"
+    ports: ["8000:8000"]
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_started}
+    volumes: ["uploads:/app/media"]
+  worker:
+    build: ./apps/api
+    env_file: .env
+    command: celery -A config worker --loglevel=INFO
+    depends_on: [api, redis]
+    volumes: ["uploads:/app/media"]
+  web:
+    build: ./apps/web
+    ports: ["5173:5173"]
+    depends_on: [api]
 volumes:
   postgres_data:
+  uploads:
