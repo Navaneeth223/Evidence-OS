@@ -1,5 +1,6 @@
 from core.models import AuditLog, ReviewTask
 from evidence.models import EvidenceAtom
+from django.db.models import Max
 from .models import AnswerDraft, AnswerCitation, Question, ApprovalEvent
 
 def draft_answer(question):
@@ -11,11 +12,13 @@ def draft_answer(question):
     score, atom = ranked[0] if ranked else (0, None)
     if atom and score >= 2:
         text = f"Based on verified company evidence: {atom.content}"
-        answer = AnswerDraft.objects.create(question=question, answer_text=text, confidence=min(score / max(len(terms), 1), 0.75), grounding_score=0.7)
+        version = (question.answers.aggregate(last=Max("version"))["last"] or 0) + 1
+        answer = AnswerDraft.objects.create(question=question, version=version, generation_mode="MOCK", answer_text=text, confidence=min(score / max(len(terms), 1), 0.75), grounding_score=0.7)
         AnswerCitation.objects.create(answer=answer, evidence=atom, quoted_excerpt=atom.content[:500], source_locator=atom.source_locator)
         reason = "MANUAL_REVIEW"
     else:
-        answer = AnswerDraft.objects.create(question=question, answer_text="I don't have enough verified evidence to answer this question.", confidence=0, grounding_score=0, status="BLOCKED")
+        version = (question.answers.aggregate(last=Max("version"))["last"] or 0) + 1
+        answer = AnswerDraft.objects.create(question=question, version=version, generation_mode="MOCK", answer_text="I don't have enough verified evidence to answer this question.", confidence=0, grounding_score=0, status="BLOCKED")
         reason = "NO_EVIDENCE"
     question.status = "REVIEW" if answer.status != "BLOCKED" else "BLOCKED"; question.save(update_fields=["status", "updated_at"])
     ReviewTask.objects.create(organization=org, title=f"Review answer: {question.question_text[:140]}", reason=reason)

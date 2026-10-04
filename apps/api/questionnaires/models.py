@@ -8,6 +8,11 @@ class Questionnaire(Timestamped):
     name = models.CharField(max_length=240)
     buyer_name = models.CharField(max_length=180, blank=True)
     status = models.CharField(max_length=20, default="READY")
+    processing_status = models.CharField(max_length=20, default="QUEUED")
+    processing_error = models.CharField(max_length=240, blank=True)
+    source_file = models.FileField(upload_to="questionnaires/%Y/%m/", blank=True)
+    original_filename = models.CharField(max_length=255, blank=True)
+    file_hash = models.CharField(max_length=64, blank=True)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
 
 class Question(Timestamped):

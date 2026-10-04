@@ -9,10 +9,14 @@ Requirements: Python 3.12+, Node.js 20+, PostgreSQL with pgvector, Redis, and Do
 1. Copy `.env.example` to `.env` and set `SECRET_KEY`, database, and Redis values.
 2. Start infrastructure: `docker compose up -d db redis`.
 3. Backend: `cd apps/api; python -m venv .venv; .\.venv\Scripts\Activate.ps1; pip install -r requirements.txt; python manage.py migrate; python manage.py runserver`.
-4. Frontend: `cd apps/web; npm.cmd install; npm.cmd run dev`.
-5. API schema: `/api/schema/`; interactive docs: `/api/docs/`; health: `/health/`.
+4. Worker: in another terminal, activate the same Python environment and run `cd apps/api; celery -A config worker --loglevel=INFO`.
+5. Frontend: `cd apps/web; npm install; npm run dev`.
+6. Open `http://localhost:5173` and create a workspace from the sign-in dialog.
+7. API schema: `/api/schema/`; interactive docs: `/api/docs/`; health: `/health/`.
 
 The default AI provider is a deterministic development provider that abstains when evidence is insufficient. Set `AI_PROVIDER=openai` and configure credentials to enable model-backed drafting. Never use the development provider as production AI. Uploaded files use local storage by default; production should configure the S3-compatible adapter.
+
+To run the complete local stack with containers, create `.env` first, then run `docker compose up --build`. The web UI can register a user and organization; there is no seeded demo account.
 
 ## Security and current scope
 
