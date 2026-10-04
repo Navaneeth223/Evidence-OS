@@ -50,5 +50,7 @@ class DocumentListCreate(APIView):
         if existing: return Response(DocumentSerializer(existing.document).data, status=200)
         doc = SourceDocument.objects.create(organization=org, title=title, owner=request.user)
         version = DocumentVersion.objects.create(document=doc, version_number=1, file=uploaded, original_filename=uploaded.name, mime_type=uploaded.content_type, file_size=uploaded.size, sha256_hash=sha)
+        from .tasks import process_document
+        process_document.delay(str(version.id))
         AuditLog.objects.create(organization=org, actor=request.user, action="DOCUMENT_UPLOADED", resource_type="SourceDocument", resource_id=doc.id, metadata={"version_id": str(version.id), "filename": uploaded.name})
         return Response(DocumentSerializer(doc).data, status=status.HTTP_201_CREATED)

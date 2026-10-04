@@ -25,6 +25,18 @@ class DocumentVersion(models.Model):
     class Meta:
         constraints = [models.UniqueConstraint(fields=["document", "version_number"], name="unique_document_version")]
 
+class DocumentSection(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    version = models.ForeignKey(DocumentVersion, on_delete=models.CASCADE, related_name="sections")
+    section_type = models.CharField(max_length=24)
+    section_path = models.TextField(blank=True)
+    page_number = models.PositiveIntegerField(null=True, blank=True)
+    sheet_name = models.CharField(max_length=120, blank=True)
+    content = models.TextField()
+    start_offset = models.PositiveIntegerField(null=True, blank=True)
+    end_offset = models.PositiveIntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
 class EvidenceAtom(Timestamped):
     class Verification(models.TextChoices):
         UNVERIFIED = "UNVERIFIED", "Unverified"; VERIFIED = "VERIFIED", "Verified"; STALE = "STALE", "Stale"; REVOKED = "REVOKED", "Revoked"; CONFLICTED = "CONFLICTED", "Conflicted"
