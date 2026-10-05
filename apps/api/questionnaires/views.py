@@ -14,6 +14,7 @@ from core.tenant import active_organization, require_role
 from .models import Questionnaire, Question, AnswerDraft
 from .serializers import QuestionnaireSerializer, QuestionSerializer, AnswerSerializer
 from .services import draft_answer, approve_answer
+from ai.providers import ProviderError
 
 class QuestionnaireList(generics.ListAPIView):
     serializer_class = QuestionnaireSerializer
@@ -35,8 +36,9 @@ class DraftAnswer(APIView):
         org = require_role(request, {"OWNER", "ADMIN", "EDITOR", "REVIEWER"})
         question = Question.objects.filter(id=question_id, questionnaire__organization=org).first()
         if question is None: return Response(status=404)
-        answer = draft_answer(question)
-        AuditLog.objects.create(organization=org, actor=request.user, action="ANSWER_DRAFTED", resource_type="Question", resource_id=question.id, metadata={"provider": "mock"})
+        try: answer = draft_answer(question)
+        except ProviderError as exc: return Response({"detail": str(exc)}, status=503)
+        AuditLog.objects.create(organization=org, actor=request.user, action="ANSWER_DRAFTED", resource_type="Question", resource_id=question.id, metadata={"provider": answer.generation_mode, "answer_id": str(answer.id)})
         return Response(AnswerSerializer(answer).data, status=201)
 
 class ApproveAnswer(APIView):

@@ -1,7 +1,7 @@
 export type Evidence = { id:string; title:string; content:string; document_title:string; verification_status:string; evidence_type:string; source_locator:Record<string,unknown> }
 export type Document = { id:string; title:string; status:string; document_type:string; trust_level:string; created_at:string }
 export type Questionnaire = { id:string; name:string; buyer_name:string; status:string; processing_status:string; processing_error:string; question_count:number }
-export type Answer = { id:string; answer_text:string; status:string; confidence:number; grounding_score:number; citations:{evidence_id:string;title:string;document_title:string;excerpt:string;source_locator:Record<string,unknown>}[] }
+export type Answer = { id:string; answer_text:string; generation_mode:string; status:string; confidence:number; grounding_score:number; citations:{evidence_id:string;title:string;document_title:string;excerpt:string;source_locator:Record<string,unknown>}[] }
 export type Question = { id:string; questionnaire:string; question_number:string; question_text:string; required:boolean; sort_order:number; status:string; latest_answer:Answer|null }
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 const token = () => localStorage.getItem('proofgraph_access')

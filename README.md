@@ -14,12 +14,12 @@ Requirements: Python 3.12+, Node.js 20+, PostgreSQL with pgvector, Redis, and Do
 6. Open `http://localhost:5173` and create a workspace from the sign-in dialog.
 7. API schema: `/api/schema/`; interactive docs: `/api/docs/`; health: `/health/`.
 
-The default AI provider is a deterministic development provider that abstains when evidence is insufficient. Set `AI_PROVIDER=openai` and configure credentials to enable model-backed drafting. Never use the development provider as production AI. Uploaded files use local storage by default; production should configure the S3-compatible adapter.
+The default AI provider is a deterministic development provider that abstains when evidence is insufficient. Set `AI_PROVIDER=openai`, `AI_API_KEY`, and `AI_MODEL` to enable the OpenAI Responses adapter; use `AI_API_BASE_URL` for a compatible endpoint. The configured provider receives the buyer question and selected verified evidence excerpts. Never use the development provider as production AI. Uploaded files use local storage by default; production should configure the S3-compatible adapter.
 
 To run the complete local stack with containers, create `.env` first, then run `docker compose up --build`. The web UI can register a user and organization; there is no seeded demo account.
 
 ## Security and current scope
 
-Tenant ownership is represented explicitly and endpoints scope lookups to the authenticated user's active organization. The foundation includes password authentication, organizations/memberships, evidence records with source locators, questionnaire questions, draft answers/citations, review tasks, and audit events. Parsing, embeddings, production AI, robust exports, invitation delivery, and billing providers still require completion before a production launch. The product does not claim those integrations work yet. See `docs/architecture/system.md` and `docs/development-status.md`.
+Tenant ownership is represented explicitly and endpoints scope lookups to the authenticated user's active organization. The foundation includes password authentication, organizations/memberships, async source parsing, heuristic questionnaire import, source-located evidence, cited answer drafts, review and approval records, and normalized XLSX export. Embeddings, Anthropic support, semantic retrieval, robust commitment validation, invitation delivery, and billing providers still require completion before a production launch. See `docs/architecture/system.md` and `docs/development-status.md`.
 
 Do not deploy with `DEBUG=True`, the development AI provider, or local file storage. Configure TLS, secret management, backups, rate limiting, email verification/reset delivery, and managed infrastructure before serving real customer data.

@@ -33,6 +33,10 @@ CELERY_TASK_TRACK_STARTED = True
 MEDIA_ROOT = env("STORAGE_ROOT", default=str(BASE_DIR / "media"))
 MEDIA_URL = "/media/"
 AI_PROVIDER = env("AI_PROVIDER", default="mock")
+AI_API_KEY = env("AI_API_KEY", default="")
+AI_API_BASE_URL = env("AI_API_BASE_URL", default="https://api.openai.com/v1")
+AI_MODEL = env("AI_MODEL", default="")
+AI_TIMEOUT_SECONDS = env.int("AI_TIMEOUT_SECONDS", default=45)
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True

@@ -22,6 +22,6 @@ class AnswerSerializer(serializers.ModelSerializer):
     citations = serializers.SerializerMethodField()
     class Meta:
         model = AnswerDraft
-        fields = ["id", "answer_text", "status", "confidence", "grounding_score", "commitment_risk_score", "citations", "created_at"]
+        fields = ["id", "answer_text", "generation_mode", "generated_by_model", "prompt_version", "status", "confidence", "grounding_score", "commitment_risk_score", "citations", "created_at"]
     def get_citations(self, obj):
         return [{"evidence_id": str(c.evidence_id), "title": c.evidence.title, "document_title": c.evidence.document.title, "excerpt": c.quoted_excerpt, "source_locator": c.source_locator} for c in obj.citations.select_related("evidence", "evidence__document")]

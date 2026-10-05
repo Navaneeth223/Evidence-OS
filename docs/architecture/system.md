@@ -24,7 +24,7 @@ The upload endpoint enforces a 25 MB ceiling and allowlists file MIME types, com
 
 ## AI and review flow
 
-The current deterministic provider searches only verified evidence within the questionnaire tenant. It cites a matched atom and queues review, or blocks the answer with an explicit abstention. Approval requires citations and records an immutable approval event and audit entry. No model-backed provider is enabled by the current answer service; configure a provider adapter before enabling production generation. Do not expose hidden reasoning in the UI.
+The default deterministic provider is development-only. An OpenAI Responses adapter is available when an operator explicitly configures its API key, model, and base URL. Retrieval is currently keyword overlap over verified evidence inside the questionnaire tenant, limited to eight bounded excerpts. The configured model must return structured JSON with source IDs; the server rejects IDs outside the retrieved set, attaches source locators, records token/latency metadata without raw prompt or answer text, and keeps every answer in review. This validates citation identity, not semantic entailment, so reviewers still need to inspect the source. Commitment screening is a conservative phrase rule and blocks matches pending review. Do not expose hidden reasoning in the UI.
 
 ## Storage and deployment
 
@@ -32,4 +32,4 @@ The configured Django FileField is the local development storage provider. It is
 
 ## Data flow diagram notes
 
-Questionnaire upload parsing, semantic embeddings/search, conflict detection, XLSX/DOCX export, email notifications, and billing are not implemented yet. Existing questionnaire records can be listed and answers can be drafted against already-recorded questions. These boundaries are also listed in `docs/development-status.md`.
+Questionnaire upload parsing uses text/row heuristics and does not preserve the buyer's layout. XLSX export writes normalized questions, answers, statuses, and source locators. Semantic embeddings/search, conflict detection, DOCX export, email notifications, Anthropic support, and billing are not implemented yet. These boundaries are also listed in `docs/development-status.md`.

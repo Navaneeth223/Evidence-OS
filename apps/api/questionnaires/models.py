@@ -34,6 +34,8 @@ class AnswerDraft(Timestamped):
     confidence = models.DecimalField(max_digits=5, decimal_places=4, default=0)
     grounding_score = models.DecimalField(max_digits=5, decimal_places=4, default=0)
     commitment_risk_score = models.DecimalField(max_digits=5, decimal_places=4, default=0)
+    generated_by_model = models.CharField(max_length=120, blank=True)
+    prompt_version = models.CharField(max_length=40, blank=True)
 
 class AnswerCitation(models.Model):
     answer = models.ForeignKey(AnswerDraft, on_delete=models.CASCADE, related_name="citations")

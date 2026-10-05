@@ -40,3 +40,21 @@ class ReviewTask(Timestamped):
     reason = models.CharField(max_length=32, default="MANUAL_REVIEW")
     status = models.CharField(max_length=20, default="OPEN")
     assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+
+class AIRun(models.Model):
+    class Status(models.TextChoices):
+        RUNNING = "RUNNING", "Running"; COMPLETED = "COMPLETED", "Completed"; FAILED = "FAILED", "Failed"
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="ai_runs")
+    run_type = models.CharField(max_length=40)
+    provider = models.CharField(max_length=40)
+    model = models.CharField(max_length=120, blank=True)
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.RUNNING)
+    input_tokens = models.PositiveIntegerField(null=True, blank=True)
+    output_tokens = models.PositiveIntegerField(null=True, blank=True)
+    latency_ms = models.PositiveIntegerField(null=True, blank=True)
+    request_metadata = models.JSONField(default=dict, blank=True)
+    result_metadata = models.JSONField(default=dict, blank=True)
+    error_type = models.CharField(max_length=80, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
