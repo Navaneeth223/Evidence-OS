@@ -1,7 +1,9 @@
 import hashlib
 import logging
+import re
 from django.http import HttpResponse
-from django.db.models import Count
+from django.db import transaction
+from django.db.models import Count, Max
 from openpyxl import Workbook
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import generics
@@ -11,7 +13,7 @@ from rest_framework.views import APIView
 from rest_framework.exceptions import ValidationError
 from core.models import AuditLog
 from core.tenant import active_organization, require_role
-from .models import Questionnaire, Question, AnswerDraft
+from .models import Questionnaire, Question, AnswerDraft, AnswerCitation
 from .serializers import QuestionnaireSerializer, QuestionSerializer, AnswerSerializer
 from .services import draft_answer, approve_answer
 from ai.providers import ProviderError
@@ -50,6 +52,42 @@ class ApproveAnswer(APIView):
         try: answer = approve_answer(answer, request.user, request.data.get("comment", ""))
         except ValueError as exc: raise ValidationError({"detail": str(exc)})
         return Response(AnswerSerializer(answer).data)
+
+class EditAnswer(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request, answer_id):
+        org = require_role(request, {"OWNER", "ADMIN", "EDITOR"})
+        answer = AnswerDraft.objects.filter(id=answer_id, question__questionnaire__organization=org).select_related("question").first()
+        if answer is None: return Response(status=404)
+        text = request.data.get("answer_text")
+        if not isinstance(text, str) or not text.strip():
+            raise ValidationError({"answer_text": "Enter an answer before saving."})
+        if len(text) > 20000:
+            raise ValidationError({"answer_text": "Answers must be 20,000 characters or fewer."})
+        with transaction.atomic():
+            latest = AnswerDraft.objects.filter(question=answer.question).aggregate(version=Max("version"))["version"]
+            if answer.version != latest:
+                raise ValidationError({"detail": "Only the latest answer version can be edited. Refresh the question and try again."})
+            commitment_pattern = r"\b(?:we\s+will|will\s+provide|guarantee[sd]?|promise[sd]?|commit(?:s|ted)?\s+to|ensure[sd]?)\b"
+            risk = 0.8 if re.search(commitment_pattern, text, re.I) else 0
+            revision = AnswerDraft.objects.create(
+                question=answer.question,
+                version=latest + 1,
+                answer_text=text.strip(),
+                generation_mode="MANUAL",
+                status="BLOCKED" if risk else "NEEDS_REVIEW",
+                confidence=answer.confidence,
+                grounding_score=answer.grounding_score,
+                commitment_risk_score=risk,
+                generated_by_model="",
+                prompt_version="manual-edit-v1",
+            )
+            for citation in answer.citations.all():
+                AnswerCitation.objects.create(answer=revision, evidence=citation.evidence, quoted_excerpt=citation.quoted_excerpt, source_locator=citation.source_locator)
+            answer.question.status = "BLOCKED" if risk else "REVIEW"
+            answer.question.save(update_fields=["status", "updated_at"])
+            AuditLog.objects.create(organization=org, actor=request.user, action="ANSWER_EDITED", resource_type="AnswerDraft", resource_id=revision.id, metadata={"previous_answer_id": str(answer.id), "version": revision.version})
+        return Response(AnswerSerializer(revision).data, status=201)
 
 class QuestionnaireImport(APIView):
     permission_classes = [IsAuthenticated]

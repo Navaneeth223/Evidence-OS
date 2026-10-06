@@ -1,4 +1,4 @@
 from django.urls import path
-from .views import QuestionnaireList, QuestionList, DraftAnswer, ApproveAnswer, QuestionnaireImport, QuestionnaireExport
+from .views import QuestionnaireList, QuestionList, DraftAnswer, ApproveAnswer, EditAnswer, QuestionnaireImport, QuestionnaireExport
 
-urlpatterns = [path("", QuestionnaireList.as_view()), path("import/", QuestionnaireImport.as_view()), path("<uuid:questionnaire_id>/export/xlsx/", QuestionnaireExport.as_view()), path("questions/", QuestionList.as_view()), path("questions/<uuid:question_id>/draft/", DraftAnswer.as_view()), path("answers/<uuid:answer_id>/approve/", ApproveAnswer.as_view())]
+urlpatterns = [path("", QuestionnaireList.as_view()), path("import/", QuestionnaireImport.as_view()), path("<uuid:questionnaire_id>/export/xlsx/", QuestionnaireExport.as_view()), path("questions/", QuestionList.as_view()), path("questions/<uuid:question_id>/draft/", DraftAnswer.as_view()), path("answers/<uuid:answer_id>/edit/", EditAnswer.as_view()), path("answers/<uuid:answer_id>/approve/", ApproveAnswer.as_view())]
