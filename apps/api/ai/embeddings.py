@@ -10,6 +10,7 @@ from .providers import ProviderError
 class MockEmbeddingProvider:
     """Stable local feature vectors for development, not semantic-quality embeddings."""
     name = "mock-hash-v1"
+    model_name = "mock-hash-v1"
     dimensions = 1536
     def embed_many(self, texts):
         vectors = []
@@ -30,6 +31,8 @@ class OpenAIEmbeddingProvider:
         self.api_key = settings.EMBEDDING_API_KEY or settings.AI_API_KEY
         self.base_url = settings.EMBEDDING_API_BASE_URL.rstrip("/")
         self.model = settings.EMBEDDING_MODEL
+        endpoint_fingerprint = hashlib.sha256(self.base_url.encode("utf-8")).hexdigest()[:12]
+        self.model_name = f"{self.model}:{endpoint_fingerprint}"
         self.dimensions = settings.EMBEDDING_DIMENSIONS
         if self.dimensions != 1536:
             raise ProviderError("The evidence vector column is configured for 1536 dimensions.")

@@ -1,7 +1,8 @@
 import re
+import hashlib
 from collections import defaultdict
 from django.db import connection
-from evidence.models import EvidenceAtom
+from evidence.models import EvidenceAtom, SearchEmbeddingCache
 
 STOP_WORDS = {"about", "after", "again", "also", "among", "been", "being", "does", "from", "have", "into", "more", "most", "only", "other", "over", "should", "that", "their", "there", "these", "they", "this", "those", "through", "under", "using", "what", "when", "where", "which", "while", "with", "your", "company"}
 
@@ -33,8 +34,16 @@ class SearchService:
         if connection.vendor != "postgresql": return []
         from pgvector.django import CosineDistance
         from ai.embeddings import get_embedding_provider
-        vector = get_embedding_provider().embed_many([query])[0]
-        queryset = EvidenceAtom.objects.filter(organization=organization, verification_status=EvidenceAtom.Verification.VERIFIED, embedding__isnull=False)
+        provider = get_embedding_provider()
+        normalized = " ".join(query.lower().split())
+        query_hash = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+        cached = SearchEmbeddingCache.objects.filter(organization=organization, query_hash=query_hash, embedding_model=provider.model_name).first()
+        if cached:
+            vector = cached.embedding
+        else:
+            vector = provider.embed_many([query])[0]
+            SearchEmbeddingCache.objects.get_or_create(organization=organization, query_hash=query_hash, embedding_model=provider.model_name, defaults={"embedding": vector})
+        queryset = EvidenceAtom.objects.filter(organization=organization, verification_status=EvidenceAtom.Verification.VERIFIED, embedding_model=provider.model_name, embedding__isnull=False)
         rows = queryset.annotate(distance=CosineDistance("embedding", vector)).order_by("distance").select_related("document")[:limit]
         return [(max(0.0, 1.0 - float(atom.distance)), atom) for atom in rows]
 

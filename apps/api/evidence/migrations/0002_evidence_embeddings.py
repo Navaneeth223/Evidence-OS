@@ -7,6 +7,8 @@ from pgvector.django import HnswIndex, VectorField
 def enable_vector_extension(apps, schema_editor):
     if schema_editor.connection.vendor == "postgresql":
         schema_editor.execute("CREATE EXTENSION IF NOT EXISTS vector")
+        from pgvector.psycopg import register_vector
+        register_vector(schema_editor.connection.connection)
 
 def create_hnsw_index(apps, schema_editor):
     if schema_editor.connection.vendor == "postgresql":

@@ -3,10 +3,11 @@ import hashlib
 import io
 import logging
 import itertools
+from django.db.models import Q
 from celery import shared_task
-from django.conf import settings
 from django.db import connection, transaction
 from django.db.utils import OperationalError
+from ai.providers import ProviderError
 from .models import DocumentVersion, DocumentSection, EvidenceAtom
 
 logger = logging.getLogger(__name__)
@@ -87,7 +88,7 @@ def process_document(self, version_id):
     except Exception as exc:
         logger.warning("Embedding task enqueue failed: version_id=%s error_type=%s", version.id, type(exc).__name__)
 
-@shared_task(bind=True, autoretry_for=(OSError,), retry_backoff=True, max_retries=3)
+@shared_task(bind=True, autoretry_for=(OSError, ProviderError, OperationalError), retry_backoff=True, max_retries=3)
 def embed_evidence_for_version(self, version_id):
     from ai.embeddings import get_embedding_provider
     if connection.vendor != "postgresql":
@@ -95,11 +96,11 @@ def embed_evidence_for_version(self, version_id):
         return
     version = DocumentVersion.objects.get(id=version_id)
     provider = get_embedding_provider()
-    query = EvidenceAtom.objects.filter(version=version, embedding__isnull=True).order_by("id").iterator(chunk_size=32)
+    query = EvidenceAtom.objects.filter(version=version).filter(Q(embedding__isnull=True) | ~Q(embedding_model=provider.model_name)).order_by("id").iterator(chunk_size=32)
     while batch := list(itertools.islice(query, 32)):
         vectors = provider.embed_many([f"{atom.title}\n{atom.content}" for atom in batch])
         for atom, vector in zip(batch, vectors):
             atom.embedding = vector
-            atom.embedding_model = provider.name if provider.name != "openai" else settings.EMBEDDING_MODEL
+            atom.embedding_model = provider.model_name
             atom.embedding_hash = atom.content_hash
         EvidenceAtom.objects.bulk_update(batch, ["embedding", "embedding_model", "embedding_hash"], batch_size=32)

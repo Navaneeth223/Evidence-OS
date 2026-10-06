@@ -11,7 +11,6 @@ from ai.providers import DraftResult, ProviderError, get_provider
 def draft_answer(question):
     """Retrieve same-tenant verified evidence, generate a cited draft, and persist a safe run record."""
     org = question.questionnaire.organization
-    terms = set(question.question_text.lower().split())
     matched = SearchService.hybrid_search(org, question.question_text, limit=8)
     allowed = {str(atom.id): atom for _, atom in matched}
     matched_score = matched[0][0] if matched else 0

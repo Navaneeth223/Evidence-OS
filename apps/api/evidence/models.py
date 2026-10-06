@@ -64,6 +64,15 @@ class EvidenceAtom(Timestamped):
             GinIndex(SearchVector("title", "content", config="simple"), name="evidence_content_gin"),
         ]
 
+class SearchEmbeddingCache(models.Model):
+    organization = models.ForeignKey("core.Organization", on_delete=models.CASCADE, related_name="search_embedding_cache")
+    query_hash = models.CharField(max_length=64)
+    embedding_model = models.CharField(max_length=120)
+    embedding = VectorField(dimensions=1536)
+    created_at = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["organization", "query_hash", "embedding_model"], name="unique_tenant_search_embedding")]
+
 class EvidenceClaim(Timestamped):
     organization = models.ForeignKey("core.Organization", on_delete=models.CASCADE)
     subject = models.CharField(max_length=240)
