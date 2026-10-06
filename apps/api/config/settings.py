@@ -9,7 +9,7 @@ DEBUG = env.bool("DEBUG", default=False)
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 INSTALLED_APPS = [
     "django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes",
-    "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles",
+    "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles", "django.contrib.postgres",
     "rest_framework", "rest_framework_simplejwt", "corsheaders", "drf_spectacular",
     "core", "evidence", "questionnaires",
 ]
@@ -37,6 +37,11 @@ AI_API_KEY = env("AI_API_KEY", default="")
 AI_API_BASE_URL = env("AI_API_BASE_URL", default="https://api.openai.com/v1")
 AI_MODEL = env("AI_MODEL", default="")
 AI_TIMEOUT_SECONDS = env.int("AI_TIMEOUT_SECONDS", default=45)
+EMBEDDING_PROVIDER = env("EMBEDDING_PROVIDER", default="mock")
+EMBEDDING_API_KEY = env("EMBEDDING_API_KEY", default="")
+EMBEDDING_API_BASE_URL = env("EMBEDDING_API_BASE_URL", default=AI_API_BASE_URL)
+EMBEDDING_MODEL = env("EMBEDDING_MODEL", default="text-embedding-3-small")
+EMBEDDING_DIMENSIONS = env.int("EMBEDDING_DIMENSIONS", default=1536)
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True

@@ -1,6 +1,9 @@
 import uuid
 from django.conf import settings
 from django.db import models
+from django.contrib.postgres.indexes import GinIndex
+from django.contrib.postgres.search import SearchVector
+from pgvector.django import HnswIndex, VectorField
 from core.models import Timestamped
 
 class SourceDocument(Timestamped):
@@ -50,8 +53,16 @@ class EvidenceAtom(Timestamped):
     verification_status = models.CharField(max_length=16, choices=Verification.choices, default=Verification.UNVERIFIED)
     confidence = models.DecimalField(max_digits=5, decimal_places=4, default=0)
     content_hash = models.CharField(max_length=64, blank=True)
+    embedding = VectorField(dimensions=1536, null=True, blank=True)
+    embedding_model = models.CharField(max_length=120, blank=True)
+    embedding_hash = models.CharField(max_length=64, blank=True)
     verified_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
     verified_at = models.DateTimeField(null=True, blank=True)
+    class Meta:
+        indexes = [
+            HnswIndex(name="evidence_embedding_hnsw", fields=["embedding"], m=16, ef_construction=64, opclasses=["vector_cosine_ops"]),
+            GinIndex(SearchVector("title", "content", config="simple"), name="evidence_content_gin"),
+        ]
 
 class EvidenceClaim(Timestamped):
     organization = models.ForeignKey("core.Organization", on_delete=models.CASCADE)

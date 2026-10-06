@@ -8,6 +8,8 @@ from questionnaires.services import approve_answer
 from questionnaires.tasks import parse_questionnaire
 from django.core.files.uploadedfile import SimpleUploadedFile
 from ai.providers import MockProvider
+from ai.embeddings import MockEmbeddingProvider
+from evidence.services.search import SearchService
 
 class TenantIsolationTests(TestCase):
     def setUp(self):
@@ -47,6 +49,14 @@ class TenantIsolationTests(TestCase):
         response = self.client.get(f"/api/questionnaires/{self.question.questionnaire_id}/export/xlsx/", HTTP_X_ORGANIZATION_ID=str(self.org_a.id))
         self.assertEqual(response.status_code, 404)
 
+    def test_search_is_scoped_to_active_organization(self):
+        doc = SourceDocument.objects.create(organization=self.org_a, title="A source")
+        version = DocumentVersion.objects.create(document=doc, version_number=1, file="a.txt", original_filename="a.txt", mime_type="text/plain", file_size=1, sha256_hash="a" * 64)
+        EvidenceAtom.objects.create(organization=self.org_a, document=doc, version=version, content="We support SAML single sign on for customers.", verification_status="VERIFIED")
+        results = SearchService.hybrid_search(self.org_a, "Does your company support SAML single sign on?", limit=5)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0][1].organization_id, self.org_a.id)
+
 class ApprovalTests(TestCase):
     def test_blocked_or_uncited_answer_cannot_be_approved(self):
         user = get_user_model().objects.create_user(username="reviewer@example.com", password="very-long-password-value")
@@ -76,3 +86,10 @@ class MockProviderTests(TestCase):
         result = MockProvider().draft("Do you support SAML single sign on?", evidence)
         self.assertFalse(result.abstain)
         self.assertEqual(result.evidence_ids, ["source-1"])
+
+    def test_mock_embedding_is_fixed_size_and_repeatable(self):
+        provider = MockEmbeddingProvider()
+        first = provider.embed_many(["SOC 2 controls and access review"])[0]
+        again = provider.embed_many(["SOC 2 controls and access review"])[0]
+        self.assertEqual(len(first), 1536)
+        self.assertEqual(first, again)
